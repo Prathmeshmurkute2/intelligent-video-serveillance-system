@@ -1,4 +1,5 @@
 from app.detection.yolo import detector
+from app.schemas.detection import Detection
 
 class Predictor:
 
@@ -7,6 +8,21 @@ class Predictor:
 
     def predict(self, image):
         results = self.model(image)
-        return results
+
+        detections = []
+
+        for result in results:
+            for box in result.boxes:
+
+                detection = Detection(
+                    class_id=int(box.cls),
+                    class_name=result.names[int(box.cls)],
+                    confidence=float(box.conf),
+                    bbox=box.xyxy[0].tolist()
+                )
+
+                detections.append(detection)
+
+        return detections
 
 predictor = Predictor()
