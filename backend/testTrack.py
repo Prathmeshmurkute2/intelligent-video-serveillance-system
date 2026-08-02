@@ -1,7 +1,7 @@
 from app.tracking.tracker import tracker
 import cv2
 
-cap = cv2.VideoCapture("backend/app/videos/walk2.mp4")
+cap = cv2.VideoCapture("backend/app/videos/walk3.mp4")
 
 while True:
 

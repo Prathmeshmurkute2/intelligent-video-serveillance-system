@@ -1,24 +1,28 @@
-def update(self, tracked_objects):
+from app.analytics.base import AnalyticsModule
 
-    for obj in tracked_objects:
+class LineCounter(AnalyticsModule):
 
-        track_id = obj.track_id
+    def update(self, tracked_objects):
 
-        _, current_y = obj.detection.bbox.center
+        for obj in tracked_objects:
 
-        if track_id in self.previous_positions:
+            track_id = obj.track_id
 
-            previous_y = self.previous_positions[track_id]
+            _, current_y = obj.detection.bbox.center
 
-            if (
-                previous_y < self.line_y
-                and current_y >= self.line_y
-                and track_id not in self.crossed_ids
-            ):
+            if track_id in self.previous_positions:
 
-                self.count += 1
-                self.crossed_ids.add(track_id)
+                previous_y = self.previous_positions[track_id]
 
-                print(f"🚨 Object {track_id} crossed the line!")
+                if (
+                    previous_y < self.line_y
+                    and current_y >= self.line_y
+                    and track_id not in self.crossed_ids
+                ):
 
-        self.previous_positions[track_id] = current_y
+                    self.count += 1
+                    self.crossed_ids.add(track_id)
+
+                    print(f"🚨 Object {track_id} crossed the line!")
+
+            self.previous_positions[track_id] = current_y
