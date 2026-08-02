@@ -2,6 +2,7 @@ import cv2
 
 from app.detection.predictor import predictor
 from app.utils.visualizer import visualizer
+from app.services.video_service import tracker
 
 
 class VideoService:
@@ -23,9 +24,13 @@ class VideoService:
             if not ret:
                 break
 
-            detections = predictor.predict(frame)
+            # detections = predictor.predict(frame)
 
-            output = visualizer.draw(frame, detections)
+            # output = visualizer.draw(frame, detections)
+            
+            tracked_objects = tracker.track(frame)
+
+            output = visualizer.draw(frame, tracked_objects)
 
             cv2.imshow("Intelligent Video Surveillance", output)
 
