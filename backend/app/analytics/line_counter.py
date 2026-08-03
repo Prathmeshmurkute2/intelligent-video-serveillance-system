@@ -1,5 +1,7 @@
 from app.analytics.base import AnalyticsModule
-
+from datetime import datetime
+from app.events.event_manager import event_manager
+from app.schemas.event import Event
 
 class LineCounter(AnalyticsModule):
     """
@@ -33,7 +35,15 @@ class LineCounter(AnalyticsModule):
                     self.count += 1
                     self.crossed_ids.add(track_id)
 
-                    print(f"🚨 Object {track_id} crossed the line!")
+                    # print(f"🚨 Object {track_id} crossed the line!")
+                    event = Event(
+                        event_type="line_crossing",
+                        track_id=track_id,
+                        timestamp=datetime.now(),
+                        message=f"Object {track_id} crossed the line"
+                    )
+
+                    event_manager.publish(event)
 
             self.previous_positions[track_id] = current_y
 
