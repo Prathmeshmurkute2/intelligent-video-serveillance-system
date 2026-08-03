@@ -29,4 +29,11 @@ class EventRepository:
 
         return db_event
 
+    def get_all(self, db: Session):
+
+        return (
+            db.query(EventModel)
+            .order_by(EventModel.timestamp.desc())
+            .all()
+        )
 event_repository = EventRepository()
