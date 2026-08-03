@@ -2,7 +2,7 @@ import cv2
 
 from app.detection.predictor import predictor
 from app.utils.visualizer import visualizer
-from app.services.video_service import tracker
+from app.tracking.tracker import tracker
 
 
 class VideoService:
@@ -31,6 +31,17 @@ class VideoService:
             tracked_objects = tracker.track(frame)
 
             output = visualizer.draw(frame, tracked_objects)
+
+            cv2.namedWindow(
+                "Intelligent Video Surveillance",
+                cv2.WINDOW_NORMAL
+            )
+
+            cv2.resizeWindow(
+                "Intelligent Video Surveillance",
+                1280,
+                720
+            )
 
             cv2.imshow("Intelligent Video Surveillance", output)
 

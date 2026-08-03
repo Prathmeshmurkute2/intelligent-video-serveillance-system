@@ -28,23 +28,38 @@ class Visualizer:
             )
 
             cv2.rectangle(
+
                 image,
+
                 (x1,y1),
+
                 (x2,y2),
+
                 (0,255,0),
+
                 2
+
             )
+
+
 
             cv2.putText(
-                image,
-                f"Cross Count: {line_counter.count}",
-                (20, 40),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0, 255, 255),
-                2
-            )
 
+                image,
+
+                f"Cross Count: {line_counter.count}",
+
+                (20, 40),
+
+                cv2.FONT_HERSHEY_SIMPLEX,
+
+                1,
+
+                (0, 255, 255),
+
+                2
+
+            )
 
 
         return image
