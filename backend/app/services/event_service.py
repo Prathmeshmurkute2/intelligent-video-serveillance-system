@@ -1,11 +1,16 @@
 from app.database.session import SessionLocal
 from app.repositories.event_repository import event_repository
+from sqlalchemy.orm import Session
 
 class EventService:
 
-    def get_events(self, page:int, size:int):
+    def get_events(self,
+                   db:Session,
+                    page:int,
+                      size:int,
+                      ):
 
-        db = SessionLocal()
+        #db = SessionLocal()
 
         try:
             skip = (page -1) * size
