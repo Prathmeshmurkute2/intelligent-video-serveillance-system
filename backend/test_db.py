@@ -4,6 +4,7 @@ import uuid
 from app.database.session import SessionLocal
 from app.repositories.event_repository import event_repository
 from app.schemas.event import Event
+from app.core.logger import logger
 
 db = SessionLocal()
 
@@ -24,4 +25,4 @@ event_repository.create(db, event)
 
 db.close()
 
-print("Saved successfully!")
+logger.info("Saved successfully!")

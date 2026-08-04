@@ -1,5 +1,6 @@
 from app.analytics.base import AnalyticsModule
 from app.schemas.zone import Zone
+from app.core.logger import logger
 
 
 class InstrusionDetector(AnalyticsModule):
@@ -25,7 +26,7 @@ class InstrusionDetector(AnalyticsModule):
 
                 if obj.track_id not in self.altered_ids:
 
-                    print(
+                    logger.info(
                         f"🚨 Intrusion! "
                         f"{obj.detection.class_name} "
                         f"#{obj.track_id}"

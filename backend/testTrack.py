@@ -1,5 +1,7 @@
 from app.tracking.tracker import tracker
 import cv2
+from app.core.logger import logger
+
 
 cap = cv2.VideoCapture("backend/app/videos/walk3.mp4")
 
@@ -13,7 +15,7 @@ while True:
     tracked_objects = tracker.track(frame)
 
     for obj in tracked_objects:
-        print(
+        logger.info(
             obj.track_id,
             obj.detection.class_name,
             obj.detection.confidence
