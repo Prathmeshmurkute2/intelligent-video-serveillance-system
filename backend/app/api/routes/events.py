@@ -4,11 +4,17 @@ from fastapi import APIRouter, Query
 
 from app.schemas.event_response import EventResponse
 from app.services.event_service import event_service
+from app.exceptions.event import EventNotFoundException
 
 router = APIRouter(
     prefix="/events",
     tags=["Events"]
 )
+
+@router.get("/test-error")
+def test():
+
+    raise EventNotFoundException()
 
 
 @router.get(
