@@ -1,12 +1,34 @@
+import { Box, Toolbar } from "@mui/material";
 import { Outlet } from "react-router-dom";
 
-export default function DashboardLayout(){
+import Navbar from "../components/layout/Navbar";
+import Sidebar from "../components/layout/Sidebar";
+
+const drawerWidth = 240;
+
+export default function DashboardLayout() {
     return (
-        <div>
-            Sidebar
-            Navbar
-           
-           <Outlet />
-        </div>
-    )
+        <Box sx={{ display: "flex" }}>
+
+            <Navbar />
+
+            <Sidebar />
+
+            <Box
+                component="main"
+                sx={{
+                    flexGrow: 1,
+                    bgcolor: "#F5F7FA",
+                    minHeight: "100vh",
+                    width: `calc(100% - ${drawerWidth}px)`,
+                    p: 3,
+                }}
+            >
+                <Toolbar />
+
+                <Outlet />
+            </Box>
+
+        </Box>
+    );
 }

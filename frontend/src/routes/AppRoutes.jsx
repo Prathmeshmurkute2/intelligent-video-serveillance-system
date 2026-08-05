@@ -7,6 +7,7 @@ import Events from "../pages/Events.jsx";
 import Cameras from "../pages/Cameras.jsx";
 import Login from "../pages/Login.jsx";
 import Settings from "../pages/Settings.jsx";
+import Analytics from "../pages/Analytics.jsx";
 
 export default function AppRoutes() {
     return (
@@ -24,7 +25,10 @@ export default function AppRoutes() {
                     <Route path="/cameras" element={<Cameras />} />
 
                     <Route path="/settings" element={<Settings />} />
-
+                    
+                    <Route 
+                        path="/analytics" element={<Analytics />}
+                    />
                 </Route>
 
             </Routes>
