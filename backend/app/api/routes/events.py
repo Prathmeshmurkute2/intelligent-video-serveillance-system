@@ -3,6 +3,7 @@ from typing import List
 from fastapi import APIRouter, Query
 
 from app.schemas.event_response import EventResponse
+from app.schemas.api_response import ApiResponse
 from app.services.event_service import event_service
 from app.exceptions.event import EventNotFoundException
 from fastapi import Depends
@@ -30,6 +31,11 @@ def get_events(
     db: Annotated[Session, Depends(get_db)]=None,
 ):
 
-    return event_service.get_events(db=db,
+    events = event_service.get_events(db=db,
                                     page=page,
                                      size= size)
+
+    return ApiResponse(
+        message="Events retrieved successfully.",
+        data=events,
+    )
