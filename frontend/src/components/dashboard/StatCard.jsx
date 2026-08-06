@@ -28,9 +28,11 @@ export default function StatCard({
 
             <CardContent>
                 <Box
-                    display="flex"
-                    justifyContent="space-between"
-                    alignItems="center"
+                    sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                    }}
                 >
                     <Box>
                         <Typography

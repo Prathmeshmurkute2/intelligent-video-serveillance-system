@@ -1,0 +1,11 @@
+FRAME_BOUNDARY = b"--frame"
+
+JPEG_CONTENT_TYPE = b"Content-Type: image/jpeg\r\n\r\n"
+
+DEFAULT_SKIP_FRAMES = 2
+
+MAX_RECENT_EVENTS = 10
+
+DEFAULT_PAGE_SIZE = 20
+
+FRAME_SKIP = 2

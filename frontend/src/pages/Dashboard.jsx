@@ -1,24 +1,28 @@
-import DashboardCards from "../components/dashboard/DashboardCards.jsx";
-
-import { useDashboard } from "../hooks/useDashboard.js";
+import DashboardCards from "../components/dashboard/DashboardCards";
+import RecentEvents from "../components/dashboard/RecentEvents";
+import EventChart from "../components/dashboard/EventChart.jsx";
+import { useDashboard } from "../hooks/useDashboard";
+import LiveCamera from "../components/dashboard/LiveCamera.jsx";
 
 export default function Dashboard() {
 
     const { data, isLoading, error } = useDashboard();
 
-    if (isLoading) {
-        return <h2>Loading...</h2>;
-    }
+    if (isLoading) return <h2>Loading...</h2>;
 
-    if (error) {
-        return <h2>Something went wrong.</h2>;
-    }
-
-    console.log(data);
+    if (error) return <h2>Something went wrong.</h2>;
 
     return (
         <>
-            <DashboardCards />
+            <DashboardCards
+                analytics={data.data.analytics}
+            />
+
+            <EventChart />
+            <LiveCamera />
+            <RecentEvents
+                events={data.data.recent_events}
+            />
         </>
     );
 }

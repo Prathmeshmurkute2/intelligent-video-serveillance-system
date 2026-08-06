@@ -7,4 +7,4 @@ T = TypeVar("T")
 class ApiResponse(BaseModel, Generic[T]):
     success: bool =True
     message: str
-    dat:T
+    data:T

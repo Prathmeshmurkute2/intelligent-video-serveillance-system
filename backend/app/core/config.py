@@ -3,19 +3,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
 
-    DATABASE_URL: str
+    APP_NAME: str = "Intelligent Video Surveillance System"
 
-    MODEL_PATH: str = "models/yolo11n.pt"
+    APP_VERSION: str = "1.0.0"
+
+    VIDEO_SOURCE: str = "backend/app/videos/test.mp4"
+
+    YOLO_MODEL: str = "yolov8n.pt"
 
     CONFIDENCE_THRESHOLD: float = 0.5
 
-    LINE_Y: int = 300
-
-    CAMERA_ID: str = "Gate-1"
-
-    TRACKER_CONFIG: str = "bytetrack.yaml"
-
-    LOG_LEVEL: str = "INFO"
+    DATABASE_URL: str
 
     model_config = SettingsConfigDict(
         env_file=".env",

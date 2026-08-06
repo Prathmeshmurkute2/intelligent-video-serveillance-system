@@ -43,9 +43,11 @@ export default function Navbar() {
                 </IconButton>
 
                 <Box
-                    display="flex"
-                    alignItems="center"
-                    ml={2}
+                    sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        ml: 2,
+                    }}
                 >
                     <Avatar
                         sx={{
@@ -55,9 +57,11 @@ export default function Navbar() {
                         A
                     </Avatar>
 
-                    <Typography
-                        ml={1}
-                        fontWeight="500"
+                   <Typography
+                        sx={{
+                            ml: 1,
+                            fontWeight: 500,
+                        }}
                     >
                         Admin
                     </Typography>
