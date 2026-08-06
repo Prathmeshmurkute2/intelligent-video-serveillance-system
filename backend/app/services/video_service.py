@@ -5,6 +5,7 @@ from app.core.logger import logger
 from app.detection.predictor import predictor
 from app.tracking.tracker import tracker
 from app.utils.visualizer import visualizer
+from app.services.metrics_service import metrics_service
 
 
 class VideoService:
@@ -47,6 +48,10 @@ class VideoService:
         # YOLO + Tracking
         tracked_objects = tracker.track(frame)
 
+        metrics_service.processed_frames += 1
+
+        metrics_service.detected_objects += len(tracked_objects)
+        metrics_service.update_fps()
         # Analytics (line crossing, intrusion...)
         self.process_analytics(tracked_objects)
 

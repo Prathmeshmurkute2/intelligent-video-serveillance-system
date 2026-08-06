@@ -1,18 +1,13 @@
 from fastapi import APIRouter
 
-from app.schemas.api_response import ApiResponse
+from app.services.health_service import health_service
 
 router = APIRouter(
-    prefix="/events",
-    tags=["Events"]
+    prefix="/health",
+    tags=["Health"],
 )
 
-@router.get("/healthy")
-def healthy():
-    return ApiResponse(
-        message="Service is healthy.",
-        data={
-            "status": "healthy",
-            "version": "1.0.0"
-        }
-    )
+
+@router.get("/")
+def get_health():
+    return health_service.get_health()
