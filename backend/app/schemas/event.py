@@ -1,14 +1,19 @@
-from dataclasses import dataclass
 from datetime import datetime
 
+from pydantic import BaseModel, ConfigDict
 
-@dataclass
-class Event:
+
+class Event(BaseModel):
+
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
     event_id: str
-    event_type:str
-    track_id:int
+    event_type: str
+    track_id: int
     camera_id: str
-    timestamp:datetime
-    severity:str
-    message:str
+    timestamp: datetime
+    severity: str
+    message: str
     metadata: dict

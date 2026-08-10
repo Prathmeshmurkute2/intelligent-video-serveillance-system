@@ -1,29 +1,30 @@
-from app.database.session import SessionLocal
-from app.repositories.event_repository import event_repository
 from sqlalchemy.orm import Session
+
+from app.repositories.event_repository import event_repository
+from app.schemas.event_response import EventResponse
+
 
 class EventService:
 
-    def get_events(self,
-                   db:Session,
-                    page:int,
-                      size:int,
-                      ):
+    def get_events(
+        self,
+        db: Session,
+        page: int,
+        size: int,
+    ):
 
-        #db = SessionLocal()
+        skip = (page - 1) * size
 
-        try:
-            skip = (page -1) * size
+        events = event_repository.get_all(
+            db,
+            skip=skip,
+            limit=size,
+        )
 
-            return event_repository.get_all(
-                db,
-                skip=skip,
-                limit=size,
-                )
-
-        finally:
-
-            db.close()
+        return [
+            EventResponse.model_validate(event)
+            for event in events
+        ]
 
 
 event_service = EventService()

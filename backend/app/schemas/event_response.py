@@ -1,17 +1,30 @@
 from datetime import datetime
-from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
+
 
 class EventResponse(BaseModel):
 
-    id:int
-    event_type: str
-    track_id: int
-    camera_id:str
-    severity: str
-    message:str
-    timestamp: datetime
-    event_metadata: dict[str, Any] | None = None
+    model_config = ConfigDict(
+        from_attributes=True
+    )
 
-    model_config = ConfigDict(from_attribute=True)
+    event_id: int = Field(
+        validation_alias="id"
+    )
+
+    event_type: str
+
+    track_id: int
+
+    camera_id: str
+
+    timestamp: datetime
+
+    severity: str
+
+    message: str
+
+    metadata: dict = Field(
+        validation_alias="event_metadata"
+    )
