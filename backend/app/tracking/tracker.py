@@ -1,6 +1,7 @@
 from app.detection.yolo import detector
 from app.schemas.detection import Detection
 from app.schemas.tracked_object import TrackedObject
+from app.schemas.bounding_box import BoundingBox
 
 
 class Tracker:
@@ -31,11 +32,20 @@ class Tracker:
 
                 class_id = int(box.cls.item())
 
+                coordinates = box.xyxy[0].tolist()
+
+                bbox = BoundingBox(
+                    x1=coordinates[0],
+                    y1=coordinates[1],
+                    x2=coordinates[2],
+                    y2=coordinates[3],
+                )
+
                 detection = Detection(
                     class_id=class_id,
                     class_name=result.names[class_id],
                     confidence=float(box.conf.item()),
-                    bbox=box.xyxy[0].tolist(),
+                    bbox=bbox,
                 )
 
                 tracked_object = TrackedObject(
