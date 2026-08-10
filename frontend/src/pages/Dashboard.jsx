@@ -16,22 +16,32 @@ export default function Dashboard() {
 
             case "event_created":
 
-                console.log("New Event:", message.data);
+                console.log(
+                    "🚨 New Event:",
+                    message.data
+                );
 
                 break;
 
             default:
 
-                console.log(message);
+                console.log(
+                    "WebSocket message:",
+                    message
+                );
 
                 break;
         }
 
     });
 
-    if (isLoading) return <h2>Loading...</h2>;
+    if (isLoading) {
+        return <h2>Loading...</h2>;
+    }
 
-    if (error) return <h2>Something went wrong.</h2>;
+    if (error) {
+        return <h2>Something went wrong.</h2>;
+    }
 
     return (
         <>

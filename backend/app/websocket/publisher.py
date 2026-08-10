@@ -3,20 +3,19 @@ from app.websocket.manager import manager
 
 class EventPublisher:
 
-    async def broadcast(self, message: dict):
+    async def publish_event(
+        self,
+        event_type: str,
+        payload: dict,
+    ):
+        message = {
+            "type": event_type,
+            "data": payload,
+        }
 
-        disconnected = []
+        print("📡 Broadcasting:", message)
 
-        for connection in self.active_connections:
-
-            try:
-                await connection.send_json(message)
-
-            except Exception:
-                disconnected.append(connection)
-
-        for connection in disconnected:
-            self.disconnect(connection)
+        await manager.broadcast(message)
 
 
 event_publisher = EventPublisher()

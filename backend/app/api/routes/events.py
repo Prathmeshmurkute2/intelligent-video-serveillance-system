@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.schemas.event import Event
 from app.core.dependencies import get_db
 from app.exceptions.event import EventNotFoundException
 from app.schemas.api_response import ApiResponse
@@ -37,4 +38,22 @@ def get_events(
     return ApiResponse(
         message="Events retrieved successfully.",
         data=events,
+    )
+
+
+
+@router.post("/")
+def create_event(
+    event: Event,
+    db: Annotated[Session, Depends(get_db)],
+):
+
+    created_event = event_service.create_event(
+        db=db,
+        event=event,
+    )
+
+    return ApiResponse(
+        message="Event created successfully.",
+        data=created_event,
     )

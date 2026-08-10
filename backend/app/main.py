@@ -9,6 +9,7 @@ from app.core.config import settings
 from app.api.routes.health import router as health_router
 from app.api.routes.metrics import router as metrics_router
 from app.api.routes.websocket import router as websocket_router
+from app.api.routes.demo import router as demo_router
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -29,6 +30,7 @@ app.add_middleware(LoggingMiddleware)
 
 register_exception_handlers(app)
 
+app.include_router(demo_router)
 app.include_router(websocket_router)
 app.include_router(metrics_router)
 app.include_router(health_router)

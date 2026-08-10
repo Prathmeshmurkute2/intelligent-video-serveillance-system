@@ -17,7 +17,7 @@ class Tracker:
             frame,
             persist=True,
             tracker="bytetrack.yaml",
-            verbose=False
+            verbose=False,
         )
 
         tracked_objects = []
@@ -29,16 +29,18 @@ class Tracker:
 
             for box in result.boxes:
 
+                class_id = int(box.cls.item())
+
                 detection = Detection(
-                    class_id=int(box.cls),
-                    class_name=result.names[int(box.cls)],
-                    confidence=float(box.conf),
-                    bbox=box.xyxy[0].tolist()
+                    class_id=class_id,
+                    class_name=result.names[class_id],
+                    confidence=float(box.conf.item()),
+                    bbox=box.xyxy[0].tolist(),
                 )
 
                 tracked_object = TrackedObject(
-                    track_id=int(box.id),
-                    detection=detection
+                    track_id=int(box.id.item()),
+                    detection=detection,
                 )
 
                 tracked_objects.append(tracked_object)
