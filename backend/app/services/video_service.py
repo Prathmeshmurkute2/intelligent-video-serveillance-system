@@ -1,11 +1,22 @@
 import cv2
+import asyncio
+from datetime import datetime
+from app.websocket.publisher import event_publisher
 
 from app.core.config import settings
 from app.core.logger import logger
+
 from app.tracking.tracker import tracker
 from app.utils.visualizer import visualizer
+
 from app.services.metrics_service import metrics_service
+from app.services.event_service import event_service
+
 from app.analytics.line_crossing import LineCrossingDetector
+
+from app.schemas.event import Event
+
+from app.database.session import SessionLocal
 
 
 class VideoService:
@@ -16,12 +27,18 @@ class VideoService:
 
     def __init__(self):
         self.cap = None
+        self.event_loop = None
 
         # Horizontal virtual line.
-        # We will make this configurable later.
+        # Camera resolution is 1280x720,
+        # so y=400 is currently used.
         self.line_crossing_detector = LineCrossingDetector(
             line_y=400
         )
+
+    # ---------------------------------------------------------
+    # VIDEO
+    # ---------------------------------------------------------
 
     def open_video(self, video_source=None):
         """
@@ -30,7 +47,7 @@ class VideoService:
 
         source = video_source or settings.VIDEO_SOURCE
 
-        # Convert numeric camera source to integer
+        # Convert "0" from environment variable to integer 0
         if isinstance(source, str) and source.isdigit():
             source = int(source)
 
@@ -41,7 +58,10 @@ class VideoService:
 
         self.cap = cv2.VideoCapture(source)
 
-        logger.info("Camera opened: %s", self.cap.isOpened())
+        logger.info(
+            "Camera opened: %s",
+            self.cap.isOpened(),
+        )
 
         if not self.cap.isOpened():
 
@@ -68,6 +88,10 @@ class VideoService:
 
         return self.cap.read()
 
+    # ---------------------------------------------------------
+    # AI PIPELINE
+    # ---------------------------------------------------------
+
     def process_frame(self, frame):
         """
         Runs the complete AI pipeline.
@@ -85,9 +109,9 @@ class VideoService:
         Visualization
         """
 
-        # --------------------------------
+        # -----------------------------------------------------
         # 1. YOLO + ByteTrack
-        # --------------------------------
+        # -----------------------------------------------------
 
         tracked_objects = tracker.track(frame)
 
@@ -97,14 +121,15 @@ class VideoService:
                 (
                     obj.track_id,
                     obj.detection.class_name,
-                    obj.detection.detection if hasattr(obj.detection, "detection") else obj.detection.bbox.center
+                    obj.detection.bbox.center,
                 )
                 for obj in tracked_objects
-            ]
+            ],
         )
-        # --------------------------------
+
+        # -----------------------------------------------------
         # 2. Metrics
-        # --------------------------------
+        # -----------------------------------------------------
 
         metrics_service.processed_frames += 1
 
@@ -114,17 +139,17 @@ class VideoService:
 
         metrics_service.update_fps()
 
-        # --------------------------------
+        # -----------------------------------------------------
         # 3. Analytics
-        # --------------------------------
+        # -----------------------------------------------------
 
         events = self.process_analytics(
             tracked_objects
         )
 
-        # --------------------------------
+        # -----------------------------------------------------
         # 4. Log detected events
-        # --------------------------------
+        # -----------------------------------------------------
 
         if events:
 
@@ -138,9 +163,9 @@ class VideoService:
                 events,
             )
 
-        # --------------------------------
+        # -----------------------------------------------------
         # 5. Draw detections
-        # --------------------------------
+        # -----------------------------------------------------
 
         output = self.draw_frame(
             frame,
@@ -149,32 +174,93 @@ class VideoService:
 
         return output
 
+    # ---------------------------------------------------------
+    # ANALYTICS + EVENT CREATION
+    # ---------------------------------------------------------
+
     def process_analytics(self, tracked_objects):
-        """
-        Runs analytics modules.
 
-        Currently:
-        - Line crossing detection
-
-        Later:
-        - Intrusion detection
-        - Crowd detection
-        - Loitering detection
-        """
-
-        events = []
-
-        # -------------------------------
-        # Line Crossing
-        # -------------------------------
-
-        line_events = self.line_crossing_detector.check(
-            tracked_objects
+        analytics_events = (
+            self.line_crossing_detector.check(
+                tracked_objects
+            )
         )
 
-        events.extend(line_events)
+        if not analytics_events:
+            return []
 
-        return events
+        logger.info(
+            "Analytics events detected: %s",
+            analytics_events,
+        )
+
+        db = SessionLocal()
+
+        try:
+
+            for analytics_event in analytics_events:
+
+                event = Event(
+                    event_type=analytics_event["event_type"],
+                    track_id=analytics_event["track_id"],
+                    camera_id="Gate-1",
+                    timestamp=datetime.now(),
+                    severity="INFO",
+                    message="Person crossed gate",
+                    metadata={
+                        "direction": analytics_event["direction"]
+                    },
+                )
+
+                event_response = event_service.create_event(
+                    db=db,
+                    event=event,
+                )
+
+                logger.info(
+                    "🚨 Event created successfully: %s",
+                    event_response.model_dump(
+                        mode="json"
+                    ),
+                )
+
+                # -----------------------------------------
+                # WebSocket broadcast
+                # -----------------------------------------
+
+                if self.event_loop is not None:
+
+                    asyncio.run_coroutine_threadsafe(
+                        event_publisher.publish_event(
+                            "event_created",
+                            event_response.model_dump(
+                                mode="json"
+                            ),
+                        ),
+                        self.event_loop,
+                    )
+
+                    logger.info(
+                        "📡 WebSocket event scheduled."
+                    )
+
+            return analytics_events
+
+        except Exception:
+
+            logger.exception(
+                "Failed to create surveillance event."
+            )
+
+            return []
+
+        finally:
+
+            db.close()
+
+    # ---------------------------------------------------------
+    # VISUALIZATION
+    # ---------------------------------------------------------
 
     def draw_frame(
         self,
@@ -189,6 +275,10 @@ class VideoService:
             frame,
             tracked_objects,
         )
+
+    # ---------------------------------------------------------
+    # ENCODING
+    # ---------------------------------------------------------
 
     def encode_frame(self, frame):
         """
@@ -209,6 +299,10 @@ class VideoService:
             return None
 
         return buffer.tobytes()
+
+    # ---------------------------------------------------------
+    # DESKTOP DISPLAY
+    # ---------------------------------------------------------
 
     def display_frame(self, frame):
         """
@@ -231,6 +325,10 @@ class VideoService:
             frame,
         )
 
+    # ---------------------------------------------------------
+    # CLEANUP
+    # ---------------------------------------------------------
+
     def cleanup(self):
         """
         Releases all resources.
@@ -247,6 +345,10 @@ class VideoService:
         logger.info(
             "Video resources released."
         )
+
+    # ---------------------------------------------------------
+    # DESKTOP VIDEO PROCESSING
+    # ---------------------------------------------------------
 
     def process_video(self, video_source=None):
         """
@@ -268,7 +370,9 @@ class VideoService:
                     frame
                 )
 
-                self.display_frame(output)
+                self.display_frame(
+                    output
+                )
 
                 if (
                     cv2.waitKey(1) & 0xFF
@@ -280,10 +384,20 @@ class VideoService:
 
             self.cleanup()
 
-    def generate_frames(self, video_source=None):
+    # ---------------------------------------------------------
+    # FASTAPI STREAMING
+    # ---------------------------------------------------------
+
+    def generate_frames(
+    self,
+    video_source=None,
+    event_loop=None,
+):
         """
         Streams processed frames for FastAPI.
         """
+
+        self.event_loop = event_loop
 
         self.open_video(video_source)
 
@@ -292,22 +406,19 @@ class VideoService:
             while True:
 
                 success, frame = self.read_frame()
-                if success:
-                    logger.info(
-                        "Frame received: %s x %s",
-                        frame.shape[1],
-                        frame.shape[0],
-                    )
+
                 if not success:
                     break
 
-                output = self.process_frame(
-                    frame
+                logger.info(
+                    "Frame received: %s x %s",
+                    frame.shape[1],
+                    frame.shape[0],
                 )
 
-                frame_bytes = self.encode_frame(
-                    output
-                )
+                output = self.process_frame(frame)
+
+                frame_bytes = self.encode_frame(output)
 
                 if frame_bytes is None:
                     continue
@@ -322,6 +433,6 @@ class VideoService:
         finally:
 
             self.cleanup()
-
+            self.event_loop = None
 
 video_service = VideoService()
