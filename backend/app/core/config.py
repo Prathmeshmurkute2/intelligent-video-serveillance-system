@@ -7,7 +7,7 @@ class Settings(BaseSettings):
 
     APP_VERSION: str = "1.0.0"
 
-    VIDEO_SOURCE: str = "backend/app/videos/test.mp4"
+    VIDEO_SOURCE: str = "0"
 
     YOLO_MODEL: str = "yolov8n.pt"
 

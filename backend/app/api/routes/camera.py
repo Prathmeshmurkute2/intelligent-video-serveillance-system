@@ -1,7 +1,8 @@
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
-from app.services.camera_service import camera_service
+from app.services.video_service import video_service
+
 
 router = APIRouter(
     prefix="/camera",
@@ -11,7 +12,8 @@ router = APIRouter(
 
 @router.get("/stream")
 def stream_camera():
+
     return StreamingResponse(
-        camera_service.generate_frames(),
+        video_service.generate_frames(),
         media_type="multipart/x-mixed-replace; boundary=frame",
     )

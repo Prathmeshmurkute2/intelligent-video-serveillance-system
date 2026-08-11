@@ -11,7 +11,10 @@ class Visualizer:
 
             detection = obj.detection
 
-            x1,y1,x2,y2 = map(int,detection.bbox)
+            x1 = int(detection.bbox.x1)
+            y1 = int(detection.bbox.y1)
+            x2 = int(detection.bbox.x2)
+            y2 = int(detection.bbox.y2)
 
             label = (
                 f"{detection.class_name}"
