@@ -6,6 +6,8 @@ from app.websocket.publisher import event_publisher
 from app.core.config import settings
 from app.core.logger import logger
 
+from app.analytics.intrusion import IntrusionDetector
+
 from app.tracking.tracker import tracker
 from app.utils.visualizer import visualizer
 
@@ -34,6 +36,10 @@ class VideoService:
         # so y=400 is currently used.
         self.line_crossing_detector = LineCrossingDetector(
             line_y=400
+        )
+
+        self.intrusion_detector = IntrusionDetector(
+            zone=(400, 200, 900, 600)
         )
 
     # ---------------------------------------------------------
@@ -126,6 +132,21 @@ class VideoService:
                 for obj in tracked_objects
             ],
         )
+        intrusion_events = self.intrusion_detector.check(
+            tracked_objects
+        )
+
+        if intrusion_events:
+
+            logger.info(
+                "🚨 INTRUSION EVENTS: %s",
+                intrusion_events,
+            )
+
+            print(
+                "🚨 INTRUSION:",
+                intrusion_events,
+            )
 
         # -----------------------------------------------------
         # 2. Metrics
@@ -179,15 +200,33 @@ class VideoService:
     # ---------------------------------------------------------
 
     def process_analytics(self, tracked_objects):
+        """
+        Runs all analytics and creates surveillance events.
+        """
 
+        # --------------------------------
+        # 1. Line crossing
+        # --------------------------------
+
+        line_events = self.line_crossing_detector.check(
+            tracked_objects
+        )
+
+        # --------------------------------
+        # 2. Intrusion detection
+        # --------------------------------
+
+        intrusion_events = self.intrusion_detector.check(
+            tracked_objects
+        )
+
+        # Combine all analytics events
         analytics_events = (
-            self.line_crossing_detector.check(
-                tracked_objects
-            )
+            line_events + intrusion_events
         )
 
         if not analytics_events:
-            return []
+            return
 
         logger.info(
             "Analytics events detected: %s",
@@ -200,17 +239,57 @@ class VideoService:
 
             for analytics_event in analytics_events:
 
+                # --------------------------------
+                # Determine event information
+                # --------------------------------
+
+                event_type = analytics_event["event_type"]
+
+                if event_type == "intrusion":
+
+                    severity = analytics_event.get(
+                        "severity",
+                        "CRITICAL",
+                    )
+
+                    message = analytics_event.get(
+                        "message",
+                        "Person entered restricted zone",
+                    )
+
+                    metadata = {
+                        "zone": self.intrusion_detector.zone,
+                    }
+
+                else:
+
+                    severity = "INFO"
+
+                    message = "Person crossed gate"
+
+                    metadata = {
+                        "direction": analytics_event[
+                            "direction"
+                        ]
+                    }
+
+                # --------------------------------
+                # Create Event
+                # --------------------------------
+
                 event = Event(
-                    event_type=analytics_event["event_type"],
+                    event_type=event_type,
                     track_id=analytics_event["track_id"],
                     camera_id="Gate-1",
                     timestamp=datetime.now(),
-                    severity="INFO",
-                    message="Person crossed gate",
-                    metadata={
-                        "direction": analytics_event["direction"]
-                    },
+                    severity=severity,
+                    message=message,
+                    metadata=metadata,
                 )
+
+                # --------------------------------
+                # Save + WebSocket broadcast
+                # --------------------------------
 
                 event_response = event_service.create_event(
                     db=db,
@@ -219,32 +298,8 @@ class VideoService:
 
                 logger.info(
                     "🚨 Event created successfully: %s",
-                    event_response.model_dump(
-                        mode="json"
-                    ),
+                    event_response,
                 )
-
-                # -----------------------------------------
-                # WebSocket broadcast
-                # -----------------------------------------
-
-                if self.event_loop is not None:
-
-                    asyncio.run_coroutine_threadsafe(
-                        event_publisher.publish_event(
-                            "event_created",
-                            event_response.model_dump(
-                                mode="json"
-                            ),
-                        ),
-                        self.event_loop,
-                    )
-
-                    logger.info(
-                        "📡 WebSocket event scheduled."
-                    )
-
-            return analytics_events
 
         except Exception:
 
@@ -252,12 +307,11 @@ class VideoService:
                 "Failed to create surveillance event."
             )
 
-            return []
-
         finally:
 
             db.close()
 
+        return analytics_events
     # ---------------------------------------------------------
     # VISUALIZATION
     # ---------------------------------------------------------
@@ -274,6 +328,7 @@ class VideoService:
         return visualizer.draw(
             frame,
             tracked_objects,
+            restricted_zone=self.intrusion_detector.zone,
         )
 
     # ---------------------------------------------------------
