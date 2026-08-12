@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     Paper,
     Typography,
@@ -6,10 +6,48 @@ import {
     Box,
 } from "@mui/material";
 
+const API_URL = "http://127.0.0.1:8000";
+
 export default function LiveCamera() {
 
     const [running, setRunning] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    // Check actual backend camera state
+    useEffect(() => {
+
+        const checkCameraStatus = async () => {
+
+            try {
+
+                const response = await fetch(
+                    `${API_URL}/camera/status`
+                );
+
+                if (!response.ok) {
+                    throw new Error(
+                        "Failed to fetch camera status"
+                    );
+                }
+
+                const data = await response.json();
+
+                setRunning(data.running);
+
+            } catch (error) {
+
+                console.error(
+                    "❌ Failed to get camera status:",
+                    error
+                );
+
+            }
+        };
+
+        checkCameraStatus();
+
+    }, []);
+
 
     const startCamera = async () => {
 
@@ -18,14 +56,16 @@ export default function LiveCamera() {
         try {
 
             const response = await fetch(
-                "http://127.0.0.1:8000/camera/start",
+                `${API_URL}/camera/start`,
                 {
                     method: "POST",
                 }
             );
 
             if (!response.ok) {
-                throw new Error("Failed to start camera");
+                throw new Error(
+                    "Failed to start camera"
+                );
             }
 
             setRunning(true);
@@ -51,14 +91,16 @@ export default function LiveCamera() {
         try {
 
             const response = await fetch(
-                "http://127.0.0.1:8000/camera/stop",
+                `${API_URL}/camera/stop`,
                 {
                     method: "POST",
                 }
             );
 
             if (!response.ok) {
-                throw new Error("Failed to stop camera");
+                throw new Error(
+                    "Failed to stop camera"
+                );
             }
 
             setRunning(false);
@@ -78,7 +120,6 @@ export default function LiveCamera() {
 
 
     return (
-
         <Paper
             elevation={3}
             sx={{
@@ -96,8 +137,6 @@ export default function LiveCamera() {
                 Live Camera Feed
             </Typography>
 
-
-            {/* Camera controls */}
 
             <Box
                 sx={{
@@ -130,9 +169,7 @@ export default function LiveCamera() {
 
                 <Typography
                     fontWeight="bold"
-                    sx={{
-                        ml: 1,
-                    }}
+                    sx={{ ml: 1 }}
                 >
                     {running
                         ? "🟢 Camera Running"
@@ -142,19 +179,15 @@ export default function LiveCamera() {
             </Box>
 
 
-            {/* Camera stream */}
-
             {running && (
-
                 <img
-                    src="http://127.0.0.1:8000/camera/stream"
+                    src={`${API_URL}/camera/stream`}
                     alt="Live Camera"
                     style={{
                         width: "100%",
                         borderRadius: "12px",
                     }}
                 />
-
             )}
 
         </Paper>
