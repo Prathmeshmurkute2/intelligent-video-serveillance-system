@@ -29,11 +29,8 @@ class VideoService:
 
     def __init__(self):
         self.cap = None
-        self.event_loop = None
+        self.is_running = False
 
-        # Horizontal virtual line.
-        # Camera resolution is 1280x720,
-        # so y=400 is currently used.
         self.line_crossing_detector = LineCrossingDetector(
             line_y=400
         )
@@ -41,10 +38,42 @@ class VideoService:
         self.intrusion_detector = IntrusionDetector(
             zone=(400, 200, 900, 600)
         )
-
     # ---------------------------------------------------------
     # VIDEO
     # ---------------------------------------------------------
+    def start_camera(self, video_source=None):
+            """
+            Starts the camera and begins processing.
+            """
+
+            if self.is_running:
+                logger.info("Camera is already running.")
+                return
+
+            self.open_video(video_source)
+
+            self.is_running = True
+
+            logger.info("🟢 Camera started.")
+
+
+    def stop_camera(self):
+        """
+        Stops the camera and releases resources.
+        """
+
+        if not self.is_running:
+            logger.info("Camera is already stopped.")
+            return
+
+        self.is_running = False
+
+        if self.cap is not None:
+            self.cap.release()
+            self.cap = None
+
+        logger.info("🔴 Camera stopped.")
+
 
     def open_video(self, video_source=None):
         """
@@ -443,33 +472,22 @@ class VideoService:
     # FASTAPI STREAMING
     # ---------------------------------------------------------
 
-    def generate_frames(
-    self,
-    video_source=None,
-    event_loop=None,
-):
+    def generate_frames(self):
         """
-        Streams processed frames for FastAPI.
+        Streams processed frames while camera is running.
         """
-
-        self.event_loop = event_loop
-
-        self.open_video(video_source)
 
         try:
 
-            while True:
+            while self.is_running:
 
                 success, frame = self.read_frame()
 
                 if not success:
+                    logger.warning(
+                        "Failed to read frame."
+                    )
                     break
-
-                logger.info(
-                    "Frame received: %s x %s",
-                    frame.shape[1],
-                    frame.shape[0],
-                )
 
                 output = self.process_frame(frame)
 
@@ -487,7 +505,7 @@ class VideoService:
 
         finally:
 
-            self.cleanup()
-            self.event_loop = None
+            if self.is_running:
+                self.stop_camera()
 
 video_service = VideoService()
