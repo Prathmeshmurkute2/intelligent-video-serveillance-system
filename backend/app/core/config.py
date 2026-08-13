@@ -15,6 +15,10 @@ class Settings(BaseSettings):
 
     DATABASE_URL: str
 
+    PROCESSING_FPS: int = 10
+
+    CROWD_THRESHOLD: int = 5
+
     model_config = SettingsConfigDict(
         env_file=".env",
         extra="ignore",

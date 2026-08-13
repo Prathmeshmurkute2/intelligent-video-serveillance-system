@@ -12,8 +12,13 @@ export default function LiveCamera() {
 
     const [running, setRunning] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [streamKey, setStreamKey] = useState(null);
 
-    // Check actual backend camera state
+
+    // --------------------------------
+    // Check backend camera status
+    // --------------------------------
+
     useEffect(() => {
 
         const checkCameraStatus = async () => {
@@ -34,6 +39,12 @@ export default function LiveCamera() {
 
                 setRunning(data.running);
 
+                // If backend is already running,
+                // create a fresh stream URL.
+                if (data.running) {
+                    setStreamKey(Date.now());
+                }
+
             } catch (error) {
 
                 console.error(
@@ -48,6 +59,10 @@ export default function LiveCamera() {
 
     }, []);
 
+
+    // --------------------------------
+    // Start camera
+    // --------------------------------
 
     const startCamera = async () => {
 
@@ -70,6 +85,9 @@ export default function LiveCamera() {
 
             setRunning(true);
 
+            // Create a fresh stream URL
+            setStreamKey(Date.now());
+
         } catch (error) {
 
             console.error(
@@ -83,6 +101,10 @@ export default function LiveCamera() {
         }
     };
 
+
+    // --------------------------------
+    // Stop camera
+    // --------------------------------
 
     const stopCamera = async () => {
 
@@ -104,6 +126,9 @@ export default function LiveCamera() {
             }
 
             setRunning(false);
+
+            // Remove old stream
+            setStreamKey(null);
 
         } catch (error) {
 
@@ -137,6 +162,10 @@ export default function LiveCamera() {
                 Live Camera Feed
             </Typography>
 
+
+            {/* -------------------------------- */}
+            {/* Camera controls */}
+            {/* -------------------------------- */}
 
             <Box
                 sx={{
@@ -179,15 +208,41 @@ export default function LiveCamera() {
             </Box>
 
 
-            {running && (
+            {/* -------------------------------- */}
+            {/* Camera stream */}
+            {/* -------------------------------- */}
+
+            {running && streamKey ? (
+
                 <img
-                    src={`${API_URL}/camera/stream`}
+                    key={streamKey}
+                    src={`${API_URL}/camera/stream?t=${streamKey}`}
                     alt="Live Camera"
                     style={{
                         width: "100%",
                         borderRadius: "12px",
                     }}
                 />
+
+            ) : (
+
+                <Box
+                    sx={{
+                        height: 400,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        backgroundColor: "#111",
+                        borderRadius: "12px",
+                    }}
+                >
+
+                    <Typography color="white">
+                        🔴 Camera is stopped
+                    </Typography>
+
+                </Box>
+
             )}
 
         </Paper>

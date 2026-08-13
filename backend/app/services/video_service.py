@@ -1,4 +1,5 @@
 import cv2
+import time
 import asyncio
 from datetime import datetime
 from app.websocket.publisher import event_publisher
@@ -20,6 +21,7 @@ from app.schemas.event import Event
 
 from app.database.session import SessionLocal
 
+from app.analytics.crowd_detector import CrowdDetector
 
 class VideoService:
     """
@@ -38,24 +40,38 @@ class VideoService:
         self.intrusion_detector = IntrusionDetector(
             zone=(400, 200, 900, 600)
         )
+
+        self.processing_fps = settings.PROCESSING_FPS
+        self.frame_interval = 1.0 / self.processing_fps
+        self.last_processed_time = 0.0
+
+        self.crowd_detector = CrowdDetector(
+            threshold=settings.CROWD_THRESHOLD
+        )
     # ---------------------------------------------------------
     # VIDEO
     # ---------------------------------------------------------
     def start_camera(self, video_source=None):
-            """
-            Starts the camera and begins processing.
-            """
 
-            if self.is_running:
-                logger.info("Camera is already running.")
-                return
+        if self.is_running:
+            logger.info(
+                "Camera is already running."
+            )
+            return
 
-            self.open_video(video_source)
+        self.open_video(video_source)
 
-            self.is_running = True
+        self.last_processed_time = (
+            time.perf_counter()
+        )
 
-            logger.info("🟢 Camera started.")
+        self.is_running = True
 
+        logger.info(
+            "🟢 Camera started. "
+            "Processing FPS: %s",
+            self.processing_fps,
+        )
 
     def stop_camera(self):
         """
@@ -150,17 +166,11 @@ class VideoService:
 
         tracked_objects = tracker.track(frame)
 
-        print(
-            "TRACKED:",
-            [
-                (
-                    obj.track_id,
-                    obj.detection.class_name,
-                    obj.detection.bbox.center,
-                )
-                for obj in tracked_objects
-            ],
+        logger.debug(
+            "Tracked objects: %d",
+            len(tracked_objects),
         )
+
         intrusion_events = self.intrusion_detector.check(
             tracked_objects
         )
@@ -229,33 +239,51 @@ class VideoService:
     # ---------------------------------------------------------
 
     def process_analytics(self, tracked_objects):
-        """
-        Runs all analytics and creates surveillance events.
-        """
+
+        analytics_events = []
 
         # --------------------------------
-        # 1. Line crossing
+        # Line crossing
         # --------------------------------
 
         line_events = self.line_crossing_detector.check(
             tracked_objects
         )
 
+        analytics_events.extend(
+            line_events
+        )
+
         # --------------------------------
-        # 2. Intrusion detection
+        # Intrusion
         # --------------------------------
 
         intrusion_events = self.intrusion_detector.check(
             tracked_objects
         )
 
-        # Combine all analytics events
-        analytics_events = (
-            line_events + intrusion_events
+        analytics_events.extend(
+            intrusion_events
         )
 
+        # --------------------------------
+        # Crowd detection
+        # --------------------------------
+
+        crowd_events = self.crowd_detector.check(
+            tracked_objects
+        )
+
+        analytics_events.extend(
+            crowd_events
+        )
+
+        # --------------------------------
+        # Create database events
+        # --------------------------------
+
         if not analytics_events:
-            return
+            return []
 
         logger.info(
             "Analytics events detected: %s",
@@ -268,57 +296,28 @@ class VideoService:
 
             for analytics_event in analytics_events:
 
-                # --------------------------------
-                # Determine event information
-                # --------------------------------
-
-                event_type = analytics_event["event_type"]
-
-                if event_type == "intrusion":
-
-                    severity = analytics_event.get(
-                        "severity",
-                        "CRITICAL",
-                    )
-
-                    message = analytics_event.get(
-                        "message",
-                        "Person entered restricted zone",
-                    )
-
-                    metadata = {
-                        "zone": self.intrusion_detector.zone,
-                    }
-
-                else:
-
-                    severity = "INFO"
-
-                    message = "Person crossed gate"
-
-                    metadata = {
-                        "direction": analytics_event[
-                            "direction"
-                        ]
-                    }
-
-                # --------------------------------
-                # Create Event
-                # --------------------------------
-
                 event = Event(
-                    event_type=event_type,
-                    track_id=analytics_event["track_id"],
+                    event_type=analytics_event["event_type"],
+                    track_id=analytics_event.get(
+                        "track_id",
+                        0,
+                    ),
                     camera_id="Gate-1",
                     timestamp=datetime.now(),
-                    severity=severity,
-                    message=message,
-                    metadata=metadata,
+                    severity=analytics_event["severity"],
+                    message=analytics_event["message"],
+                    metadata={
+                        key: value
+                        for key, value
+                        in analytics_event.items()
+                        if key not in {
+                            "event_type",
+                            "track_id",
+                            "severity",
+                            "message",
+                        }
+                    },
                 )
-
-                # --------------------------------
-                # Save + WebSocket broadcast
-                # --------------------------------
 
                 event_response = event_service.create_event(
                     db=db,
@@ -474,7 +473,11 @@ class VideoService:
 
     def generate_frames(self):
         """
-        Streams processed frames while camera is running.
+        Streams processed frames while the camera is running.
+
+        Camera may provide frames faster than the AI pipeline
+        should process them. YOLO + ByteTrack are therefore
+        limited by PROCESSING_FPS.
         """
 
         try:
@@ -489,9 +492,32 @@ class VideoService:
                     )
                     break
 
+                current_time = time.perf_counter()
+
+                # --------------------------------
+                # FPS throttling
+                # --------------------------------
+
+                elapsed = (
+                    current_time
+                    - self.last_processed_time
+                )
+
+                if elapsed < self.frame_interval:
+
+                    continue
+
+                self.last_processed_time = current_time
+
+                # --------------------------------
+                # AI processing
+                # --------------------------------
+
                 output = self.process_frame(frame)
 
-                frame_bytes = self.encode_frame(output)
+                frame_bytes = self.encode_frame(
+                    output
+                )
 
                 if frame_bytes is None:
                     continue
@@ -505,7 +531,8 @@ class VideoService:
 
         finally:
 
-            if self.is_running:
-                self.stop_camera()
+            logger.info(
+                "Frame generator stopped."
+            )
 
 video_service = VideoService()
