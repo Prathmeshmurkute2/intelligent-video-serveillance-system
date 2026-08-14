@@ -1,67 +1,74 @@
+from app.core.logger import logger
+
+
 class CrowdDetector:
-    """
-    Detects when the number of people in the camera
-    exceeds the configured crowd threshold.
-    """
 
-    def __init__(self, threshold: int = 5):
+    def __init__(
+        self,
+        threshold,
+        clear_after_frames=20,
+    ):
         self.threshold = threshold
-
-        # Prevent repeated events while the crowd
-        # remains above the threshold.
         self.crowd_active = False
+        self.below_threshold_frames = 0
+        self.clear_after_frames = clear_after_frames
 
-    def check(self, tracked_objects):
+        def check(self, tracked_objects):
 
-        person_count = 0
+            events = []
 
-        for tracked_object in tracked_objects:
+            person_count = sum(
+                1
+                for tracked_object in tracked_objects
+                if tracked_object.detection.class_name == "person"
+            )
 
-            if (
-                tracked_object.detection.class_name
-                == "person"
-            ):
-                person_count += 1
+            logger.info(
+                "CROWD STATE | people=%d | active=%s | below_frames=%d",
+                person_count,
+                self.crowd_active,
+                self.below_threshold_frames,
+            )
 
-        events = []
+            if person_count >= self.threshold:
 
-        # --------------------------------
-        # Crowd detected
-        # --------------------------------
+                self.below_threshold_frames = 0
 
-        if (
-            person_count >= self.threshold
-            and not self.crowd_active
-        ):
+                if not self.crowd_active:
 
-            self.crowd_active = True
+                    self.crowd_active = True
 
-            events.append({
-                "event_type": "crowd_detected",
-                "person_count": person_count,
-                "severity": "WARNING",
-                "message": (
-                    f"Crowd detected: "
-                    f"{person_count} people"
-                ),
-            })
+                    events.append({
+                        "event_type": "crowd_detected",
+                        "person_count": person_count,
+                        "severity": "WARNING",
+                        "message": (
+                            f"Crowd detected: "
+                            f"{person_count} people"
+                        ),
+                    })
 
-        # --------------------------------
-        # Crowd cleared
-        # --------------------------------
+            else:
 
-        elif (
-            person_count < self.threshold
-            and self.crowd_active
-        ):
+                if self.crowd_active:
 
-            self.crowd_active = False
+                    self.below_threshold_frames += 1
 
-        return events
+                    if (
+                        self.below_threshold_frames
+                        >= self.clear_after_frames
+                    ):
 
+                        self.crowd_active = False
+                        self.below_threshold_frames = 0
+
+            return events
+        # rest of your existing code...
     def reset(self):
         """
-        Reset crowd state when a camera session starts.
+        Reset crowd state for a new camera session.
         """
 
         self.crowd_active = False
+
+        self.below_threshold_frames = 0

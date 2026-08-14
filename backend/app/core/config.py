@@ -17,7 +17,7 @@ class Settings(BaseSettings):
 
     PROCESSING_FPS: int = 10
 
-    CROWD_THRESHOLD: int = 5
+    CROWD_THRESHOLD: int = 2
 
     model_config = SettingsConfigDict(
         env_file=".env",

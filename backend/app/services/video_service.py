@@ -1,6 +1,6 @@
 import cv2
 import time
-import asyncio
+
 from datetime import datetime
 from app.websocket.publisher import event_publisher
 
@@ -59,6 +59,11 @@ class VideoService:
             )
             return
 
+        # Reset analytics state for new session
+        self.line_crossing_detector.reset()
+        self.intrusion_detector.reset()
+        self.crowd_detector.reset()
+
         self.open_video(video_source)
 
         self.last_processed_time = (
@@ -68,8 +73,7 @@ class VideoService:
         self.is_running = True
 
         logger.info(
-            "🟢 Camera started. "
-            "Processing FPS: %s",
+            "🟢 Camera started. Processing FPS: %s",
             self.processing_fps,
         )
 
@@ -171,21 +175,7 @@ class VideoService:
             len(tracked_objects),
         )
 
-        intrusion_events = self.intrusion_detector.check(
-            tracked_objects
-        )
-
-        if intrusion_events:
-
-            logger.info(
-                "🚨 INTRUSION EVENTS: %s",
-                intrusion_events,
-            )
-
-            print(
-                "🚨 INTRUSION:",
-                intrusion_events,
-            )
+        
 
         # -----------------------------------------------------
         # 2. Metrics
@@ -304,8 +294,15 @@ class VideoService:
                     ),
                     camera_id="Gate-1",
                     timestamp=datetime.now(),
-                    severity=analytics_event["severity"],
-                    message=analytics_event["message"],
+                    severity=analytics_event.get(
+                        "severity",
+                        "INFO",
+                    ),
+
+                    message=analytics_event.get(
+                        "message",
+                        f"{analytics_event['event_type']} detected",
+                    ),
                     metadata={
                         key: value
                         for key, value

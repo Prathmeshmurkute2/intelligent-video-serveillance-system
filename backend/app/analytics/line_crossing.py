@@ -11,6 +11,11 @@ class LineCrossingDetector:
 
         # Stores the last known side of the line
         self.track_sides = {}
+    def reset(self):
+        """
+        Reset tracking state for a new camera session.
+        """
+        self.previous_positions.clear()
 
     def check(self, tracked_objects):
 
